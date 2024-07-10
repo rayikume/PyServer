@@ -23,6 +23,28 @@ def authorize_request(func):
             return request
     return wrapper
 
+def response_generator(req, method):
+    try:
+        if method == "GET":
+            yield {
+                "Status": "200",
+                "Response": "You Recieved What You're Looking For!"
+            }
+        if method == "POST":
+            yield {
+                "Status": "200",
+                "Response": "You're Content is Submitted Successfully!"
+            }
+    except:
+        yield {
+            "Status": "404",
+            "Response": "Error Generating Response"
+        }
+
+def streaming_response_generator():
+    pass
+
+
 # Iterator protocol to manage multiple requests.
 class RequestIterator:
     def __init__(self, request_list):
@@ -47,12 +69,16 @@ class BaseRequestHandler:
         print("Base class called")
     
 class GetRequestHandler(BaseRequestHandler):
-    def handle_request(self):
-        return "Get class called"
+    def handle_request(self, request):
+        response = response_generator(request, "GET")
+        response_list = list(response)
+        return response_list
 
 class PostRequestHandler(BaseRequestHandler):
     def handle_request(self):
-        return "Post class called"
+        response = response_generator(request, "POST")
+        response_list = list(response)
+        return response_list
 
 # Context manager that handles server's operation
 class ServerContextManager:
@@ -79,12 +105,14 @@ with ServerContextManager() as server:
             for x in lista:
                 if x.get("Access") == True:
                     if x.get("Method") == "GET":
-                        response = GetRequestHandler().handle_request()
+                        response = GetRequestHandler().handle_request(x)
                     if x.get("Method") == "POST":
                         response = PostRequestHandler().handle_request()
                 else:
                     response = "Access Denied"
                 responses.append(response)
+            
+            print(responses)
             
             serialized_responses = json.dumps(responses)
             client.sendall(serialized_responses.encode())
