@@ -4,25 +4,30 @@ import json
 dummy_requests = [
     {
         "Username": "luca",
-        "Method": "GET"
+        "Method": "GET",
+        "Access": ""
     }, 
     {
         "Username": "ye",
-        "Method": "GET"
+        "Method": "GET",
+        "Access": ""
     },
     {
         "Username": "luca",
         "Method": "POST", 
-        "Content": "It's a lot of reasons not to speak at all, You probably wonder if I bleed at all"
+        "Content": "It's a lot of reasons not to speak at all, You probably wonder if I bleed at all",
+        "Access": ""
     },
     {
         "Username": "jhon",
         "Method": "POST",
-        "Content": "Hi everyone!"
+        "Content": "Hi everyone!",
+        "Access": ""
     },
     {
         "Username": "sandy",
-        "Method": "GET"
+        "Method": "GET",
+        "Access": ""
     }
 ]
 
@@ -36,7 +41,7 @@ try:
     s.connect(("127.0.0.1", 5000)) 
     msg = json.dumps(dummy_requests)
     s.send(msg.encode())
-    print (s.recv(1024).decode())
+    print(s.recv(1024).decode())
 except socket.error as err:
     print("Can't connnect to the server %s" %(err))
 finally:
