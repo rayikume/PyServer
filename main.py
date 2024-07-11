@@ -31,18 +31,29 @@ dummy_requests = [
     }
 ]
 
-try: 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-    print ("Socket successfully created")
-except socket.error as err: 
-    print ("socket creation failed with error %s" %(err))
- 
-try:
-    s.connect(("127.0.0.1", 5000)) 
-    msg = json.dumps(dummy_requests)
-    s.send(msg.encode())
-    print(s.recv(1024).decode())
-except socket.error as err:
-    print("Can't connnect to the server %s" %(err))
-finally:
-    s.close() 
+class ClientContextManager:
+    def __enter__(self):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print ("Socket successfully created")
+        return self.client
+     
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.client.close()
+
+with ClientContextManager() as s:
+    complete_data = ""
+    try:
+        s.connect(("127.0.0.1", 5000)) 
+        msg = json.dumps(dummy_requests)
+        s.send(msg.encode())
+        while True:
+            data = s.recv(1024).decode()
+            if data.endswith("DONE"):
+                complete_data += data[:-4]
+                break
+            complete_data += data
+        print("Received data:", complete_data)
+    except socket.error as err:
+        print("Can't connnect to the server %s" %(err))
+    except KeyboardInterrupt:
+        print("\nSession Closed.")

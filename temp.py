@@ -23,27 +23,16 @@ def authorize_request(func):
             return request
     return wrapper
 
-def response_generator(req, method):
-    try:
-        if method == "GET":
-            yield {
-                "Status": "200",
-                "Response": "You Recieved What You're Looking For!"
-            }
-        if method == "POST":
-            yield {
-                "Status": "200",
-                "Response": "You're Content is Submitted Successfully!"
-            }
-    except:
-        yield {
-            "Status": "404",
-            "Response": "Error Generating Response"
-        }
+def response_generator(status, response):
+    response = {
+        "Status": status,
+        "Response": response
+    }
+    yield response
 
-def streaming_response_generator():
-    pass
-
+def streaming_response_generator(response, chunk_size=1024):
+    for i in range(0, len(response), chunk_size):
+        yield response[i:i + chunk_size]
 
 # Iterator protocol to manage multiple requests.
 class RequestIterator:
@@ -65,20 +54,23 @@ class RequestIterator:
             raise StopIteration
 
 class BaseRequestHandler:
-    def handle_request(self):
-        print("Base class called")
+    def handle_request(self, request):
+        if request.get("Access") == True:
+            if request.get("Method") == "GET":
+                return GetRequestHandler().handle_request()
+            if request.get("Method") == "POST":
+                return PostRequestHandler().handle_request()
+        else:
+            return "Access Denied"
     
 class GetRequestHandler(BaseRequestHandler):
-    def handle_request(self, request):
-        response = response_generator(request, "GET")
-        response_list = list(response)
-        return response_list
-
+    def handle_request(self):
+        response = response_generator(200, "imagine you got what you asked for")
+        return response
 class PostRequestHandler(BaseRequestHandler):
     def handle_request(self):
-        response = response_generator(request, "POST")
-        response_list = list(response)
-        return response_list
+        response = response_generator(200, "successful submission")
+        return response
 
 # Context manager that handles server's operation
 class ServerContextManager:
@@ -100,22 +92,17 @@ with ServerContextManager() as server:
             print(f"Connected with {client_address}\n")
             request = client.recv(1024).decode()
             objson = json.loads(request)
-            lista = RequestIterator(objson)
+            objIteration = RequestIterator(objson)
             responses = []
-            for x in lista:
-                if x.get("Access") == True:
-                    if x.get("Method") == "GET":
-                        response = GetRequestHandler().handle_request(x)
-                    if x.get("Method") == "POST":
-                        response = PostRequestHandler().handle_request()
+            for x in objIteration:
+                if x["Access"] == True:
+                    response = BaseRequestHandler().handle_request(x)
+                    responses.extend(response)
                 else:
-                    response = "Access Denied"
-                responses.append(response)
-            
-            print(responses)
-            
-            serialized_responses = json.dumps(responses)
-            client.sendall(serialized_responses.encode())
-            
+                    responses.append("Access Denied.")
+            for x in responses:
+                serial = json.dumps(x)
+                client.send(serial.encode())
+            client.send("DONE".encode())
     except KeyboardInterrupt:
         print("\nServer is shutting down...")
