@@ -1,5 +1,6 @@
 import socket
 import json
+import asyncio
 
 dummy_requests = [
     {
@@ -31,29 +32,43 @@ dummy_requests = [
     }
 ]
 
-class ClientContextManager:
+class Singleton(type):
+    instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls.instances:
+            cls.instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls.instances[cls]
+
+class ClientContextManager(metaclass=Singleton):
     def __enter__(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print ("Socket successfully created")
+        print ("Socket successfully created\n")
         return self.client
      
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.client.close()
 
 with ClientContextManager() as s:
-    complete_data = ""
     try:
         s.connect(("127.0.0.1", 5000)) 
         msg = json.dumps(dummy_requests)
         s.send(msg.encode())
         while True:
             data = s.recv(1024).decode()
+            print(f"{data}")
             if data.endswith("DONE"):
-                complete_data += data[:-4]
                 break
-            complete_data += data
-        print("Received data:", complete_data)
     except socket.error as err:
         print("Can't connnect to the server %s" %(err))
     except KeyboardInterrupt:
         print("\nSession Closed.")
+
+def test_singleton():
+    instance1 = ClientContextManager()
+    instance2 = ClientContextManager()
+    
+    print("Instance 1:", instance1)
+    print("Instance 2:", instance2)
+    print("Are both instances the same?", instance1 is instance2)
+
+test_singleton()

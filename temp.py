@@ -1,6 +1,7 @@
 import socket
 from datetime import datetime
 import json
+import asyncio
 
 # Decorator that print that logs each incoming request.
 def log_request(func):
@@ -23,16 +24,13 @@ def authorize_request(func):
             return request
     return wrapper
 
-def response_generator(status, response):
-    response = {
-        "Status": status,
-        "Response": response
-    }
-    yield response
+def response_generator(response, method):
+    res = f"[{datetime.now().strftime("%d/%m/%Y %I:%M %p")}]: Recieved /{method} Response: {response}"
+    yield res
 
-def streaming_response_generator(response, chunk_size=1024):
-    for i in range(0, len(response), chunk_size):
-        yield response[i:i + chunk_size]
+def streaming_response_generator(body_chunks):
+        for chunk in body_chunks:
+            yield chunk
 
 # Iterator protocol to manage multiple requests.
 class RequestIterator:
@@ -65,15 +63,22 @@ class BaseRequestHandler:
     
 class GetRequestHandler(BaseRequestHandler):
     def handle_request(self):
-        response = response_generator(200, "imagine you got what you asked for")
+        response = response_generator("Imagine you got what you asked for", "GET")
         return response
 class PostRequestHandler(BaseRequestHandler):
     def handle_request(self):
-        response = response_generator(200, "successful submission")
+        response = response_generator("Successful submission!", "POST")
         return response
 
+class Singleton(type):
+    instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls.instances:
+            cls.instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls.instances[cls]
+    
 # Context manager that handles server's operation
-class ServerContextManager:
+class ServerContextManager(metaclass=Singleton):
     def __enter__(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.bind(('', 5000))
@@ -82,6 +87,14 @@ class ServerContextManager:
      
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.server.close()
+
+def test_singleton():
+    instance1 = ServerContextManager()
+    instance2 = ServerContextManager()
+    
+    print("Instance 1:", instance1)
+    print("Instance 2:", instance2)
+    print("Are both instances the same?", instance1 is instance2)
 
 with ServerContextManager() as server:
     print("\nServer is listening...\n")
@@ -100,9 +113,11 @@ with ServerContextManager() as server:
                     responses.extend(response)
                 else:
                     responses.append("Access Denied.")
-            for x in responses:
-                serial = json.dumps(x)
-                client.send(serial.encode())
-            client.send("DONE".encode())
+            stream = streaming_response_generator(responses)
+            for part in stream:
+                client.send(f"{part}\n".encode())
+                print(part)
+            client.send("\nDONE".encode())
+            test_singleton()
     except KeyboardInterrupt:
         print("\nServer is shutting down...")
