@@ -2,6 +2,7 @@ import socket
 from datetime import datetime
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
+from abc import ABC, abstractmethod
 import json
 import asyncio
 import random
@@ -19,10 +20,7 @@ def log_request(func):
 def authorize_request(func):
     async def wrapper(*args, **kwargs):
         request = await func(*args, **kwargs)
-        if request.get("Username", "").lower() == "luca":
-            request["Access"] = True
-        else:
-            request["Access"] = False
+        request["Access"] = request.get("Username", "").lower() == "luca"
         return request
     return wrapper
 
@@ -76,15 +74,10 @@ class AsyncRequestIterator:
             raise StopAsyncIteration
 
 # Base class to handle requests based on their method.
-class BaseRequestHandler:
+class BaseRequestHandler(ABC):
+    @abstractmethod
     async def handle_request(self, request):
-        if request.get("Access"):
-            if request.get("Method") == "GET":
-                return await GetRequestHandler().handle_request()
-            if request.get("Method") == "POST":
-                return await PostRequestHandler().handle_request()
-        else:
-            return ["Access Denied"]
+        pass
 
 # Handler for GET requests.
 class GetRequestHandler(BaseRequestHandler):
@@ -107,7 +100,11 @@ async def async_request_handler(client):
         objIteration = AsyncRequestIterator(objson)
         responses = []
         async for x in objIteration:
-            response = await BaseRequestHandler().handle_request(x)
+            if x.get("Access") == True:
+                handler = GetRequestHandler() if x.get("Method") == "GET" else PostRequestHandler()
+                response = await handler.handle_request()
+            else:
+                response = ["Access Denied"]
             responses.extend(response)
         stream = streaming_response_generator(responses)
         async for part in stream:
@@ -148,12 +145,12 @@ async def main():
     with ServerContextManager() as server:
         print("\nServer is listening...\n")
         while loop:
-            print("----------------------------------------------------------------------------------------------")
             client, client_address = await asyncio.to_thread(server.accept)
             print(f"Connected with {client_address}\n")
             asyncio.create_task(async_request_handler(client))
             loop = await stop_server_after_delay(15)
-        print("\nServer is shutting down...\n")
+        print("\nServer is shutting down...")
+        print("----------------------------------------------------------------------")
 
 # Run the main function to start the server.
 asyncio.run(main())

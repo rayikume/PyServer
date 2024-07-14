@@ -55,25 +55,6 @@ class TestAsyncRequestIterator(unittest.IsolatedAsyncioTestCase):
         result = [req async for req in iterator]
         self.assertEqual(result[0]["Username"], "Luca")
 
-class TestBaseRequestHandler(unittest.IsolatedAsyncioTestCase):
-    async def test_handle_request_get(self):
-        handler = BaseRequestHandler()
-        request = {"Access": True, "Method": "GET"}
-        response = await handler.handle_request(request)
-        self.assertEqual(next(response), f"[{datetime.datetime.now().strftime("%d/%m/%Y %I %p")}]: Received /GET Response: Imagine you got what you asked for")
-
-    async def test_handle_request_post(self):
-        handler = BaseRequestHandler()
-        request = {"Access": True, "Method": "POST"}
-        response = await handler.handle_request(request)
-        self.assertEqual(next(response), f"[{datetime.datetime.now().strftime("%d/%m/%Y %I %p")}]: Received /POST Response: Successful submission!")
-
-    async def test_handle_request_denied(self):
-        handler = BaseRequestHandler()
-        request = {"Access": False}
-        response = await handler.handle_request(request)
-        self.assertEqual(response, ["Access Denied"])
-
 class TestGetRequestHandler(unittest.IsolatedAsyncioTestCase):
     async def test_handle_request(self):
         handler = GetRequestHandler()
