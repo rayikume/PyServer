@@ -84,22 +84,46 @@ This file contains unit tests for the server components using the `unittest` fra
 
 To run the server, execute the following command:
 
+Windows:
+
 ```bash
 python webserver.py
 ```
 
+MacOS:
+
+```bash
+python3 webserver.py
+```
+
 ## Running the Client
 
-To run the client, execute the following command:
+To run the client, execute the following command in a seperate terminal:
+
+Windows:
 
 ```bash
 python webclient.py
+```
+
+MacOS:
+
+```bash
+python3 webclient.py
 ```
 
 ## Running the Tests
 
 To run the unit tests, execute the following command:
 
+Windows:
+
 ```bash
 python -m unittest test_webserver.py
+```
+
+MacOS:
+
+```bash
+python3 -m unittest test_webserver.py
 ```
